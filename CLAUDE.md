@@ -12,8 +12,15 @@ EvergreenParsing is a Python project that parses Evergreen emails and creates Go
 2. Enable the Google Calendar API
 3. Create an OAuth 2.0 Client ID (Desktop application)
 4. Download `credentials.json` into the project root
-5. Install dependencies: `pip install -r requirements.txt`
-6. First run of `python main.py list` will open a browser for OAuth consent
+5. Create `config.json` in the project root to specify a calendar ID:
+   ```json
+   {
+       "calendar_id": "your_calendar_id_here"
+   }
+   ```
+   If omitted, defaults to `"primary"`. This file is gitignored.
+6. Install dependencies: `pip install -r requirements.txt`
+7. First run of `python main.py list` will open a browser for OAuth consent
 
 ## Commands
 
@@ -26,6 +33,7 @@ EvergreenParsing is a Python project that parses Evergreen emails and creates Go
 
 ## Architecture
 
-- `calendar_service.py` — Core library: OAuth 2.0 authentication and Google Calendar API wrapper functions (`authenticate`, `list_events`, `create_event`, `get_event`, `delete_event`)
+- `config.json` — User-specific configuration (gitignored). Contains `calendar_id` used by all API methods.
+- `calendar_service.py` — Core library: `load_config` reads `config.json`, `authenticate` handles OAuth 2.0, and `list_events`/`create_event`/`get_event`/`delete_event` wrap the Google Calendar API
 - `main.py` — CLI entry point using argparse with subcommands
 - `tests/test_calendar_service.py` — Unit tests with mocked API calls (no credentials needed)
