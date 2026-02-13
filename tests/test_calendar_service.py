@@ -5,7 +5,24 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from calendar_service import authenticate, list_events, create_event, get_event, delete_event
+from calendar_service import authenticate, load_config, list_events, create_event, get_event, delete_event
+
+
+# --- load_config tests ---
+
+@patch("calendar_service.os.path.exists", return_value=True)
+@patch("builtins.open", new_callable=mock_open, read_data='{"calendar_id": "my_cal_123"}')
+def test_load_config_reads_file(mock_file, mock_exists):
+    """When config.json exists, load calendar_id from it."""
+    config = load_config(config_path="config.json")
+    assert config["calendar_id"] == "my_cal_123"
+
+
+@patch("calendar_service.os.path.exists", return_value=False)
+def test_load_config_defaults_when_missing(mock_exists):
+    """When config.json is missing, default to 'primary'."""
+    config = load_config(config_path="config.json")
+    assert config["calendar_id"] == "primary"
 
 
 # --- authenticate tests ---
@@ -21,7 +38,7 @@ def test_authenticate_existing_valid_token(mock_exists, mock_creds_cls, mock_bui
 
     service = authenticate(token_path="token.json", credentials_path="credentials.json")
 
-    mock_creds_cls.from_authorized_user_file.assert_called_once_with("token.json", authenticate.__module__ and ["https://www.googleapis.com/auth/calendar"])
+    mock_creds_cls.from_authorized_user_file.assert_called_once_with("token.json", ["https://www.googleapis.com/auth/calendar"])
     mock_build.assert_called_once_with("calendar", "v3", credentials=mock_creds)
     assert service == mock_build.return_value
 
@@ -76,10 +93,10 @@ def test_list_events():
     ]
     mock_service.events().list().execute.return_value = {"items": fake_items}
 
-    result = list_events(mock_service, max_results=5)
+    result = list_events(mock_service, max_results=5, calendar_id="test_cal")
 
     mock_service.events().list.assert_called_with(
-        calendarId="primary",
+        calendarId="test_cal",
         timeMin=mock_service.events().list.call_args.kwargs["timeMin"],
         maxResults=5,
         singleEvents=True,
@@ -93,7 +110,7 @@ def test_list_events_empty():
     mock_service = MagicMock()
     mock_service.events().list().execute.return_value = {}
 
-    result = list_events(mock_service)
+    result = list_events(mock_service, calendar_id="test_cal")
 
     assert result == []
 
@@ -115,10 +132,11 @@ def test_create_event():
         end=end,
         description="A test event",
         location="Room 1",
+        calendar_id="test_cal",
     )
 
     mock_service.events().insert.assert_called_with(
-        calendarId="primary",
+        calendarId="test_cal",
         body={
             "summary": "Test",
             "start": {"dateTime": start.isoformat(), "timeZone": "America/Los_Angeles"},
@@ -138,9 +156,9 @@ def test_get_event():
     fake_event = {"id": "evt123", "summary": "Meeting"}
     mock_service.events().get().execute.return_value = fake_event
 
-    result = get_event(mock_service, "evt123")
+    result = get_event(mock_service, "evt123", calendar_id="test_cal")
 
-    mock_service.events().get.assert_called_with(calendarId="primary", eventId="evt123")
+    mock_service.events().get.assert_called_with(calendarId="test_cal", eventId="evt123")
     assert result == fake_event
 
 
@@ -150,7 +168,7 @@ def test_delete_event():
     """Verify event_id is passed to the delete API call."""
     mock_service = MagicMock()
 
-    delete_event(mock_service, "evt456")
+    delete_event(mock_service, "evt456", calendar_id="test_cal")
 
-    mock_service.events().delete.assert_called_with(calendarId="primary", eventId="evt456")
+    mock_service.events().delete.assert_called_with(calendarId="test_cal", eventId="evt456")
     mock_service.events().delete().execute.assert_called_once()

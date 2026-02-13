@@ -210,3 +210,4 @@ __marimo__/
 credentials.json
 client_secret_*.json
 token.json
+config.json
