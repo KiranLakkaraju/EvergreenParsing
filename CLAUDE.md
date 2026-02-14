@@ -37,7 +37,8 @@ EvergreenParsing is a Python project that parses Evergreen emails and creates Go
 - **Create event:** `python main.py create --summary "..." --start "YYYY-MM-DDTHH:MM" --end "YYYY-MM-DDTHH:MM" [--description "..."] [--location "..."]`
 - **Get event:** `python main.py get --id EVENT_ID`
 - **Delete event:** `python main.py delete --id EVENT_ID`
-- **Parse email:** `python main.py parse --input "data/Monday Bulletin 2.9.2026.eml" --output parsed_events.csv`
+- **Process email end-to-end:** `python main.py process --input "data/Monday Bulletin 2.9.2026.eml"` (parses email, checks for duplicates, creates events)
+- **Parse email only:** `python main.py parse --input "data/Monday Bulletin 2.9.2026.eml" --output parsed_events.csv`
 - **Add parsed events to calendar:** `python main.py add --input parsed_events.csv` (skips duplicate events using LLM comparison against existing calendar events)
 
 ## Architecture
