@@ -1,11 +1,11 @@
 """Unit tests for calendar_service.py — all Google API calls are mocked."""
 
-from datetime import datetime
+from datetime import date, datetime
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from calendar_service import authenticate, load_config, list_events, create_event, get_event, delete_event
+from calendar_service import authenticate, load_config, list_events, create_event, create_all_day_event, get_event, delete_event
 
 
 # --- load_config tests ---
@@ -143,6 +143,33 @@ def test_create_event():
             "end": {"dateTime": end.isoformat(), "timeZone": "America/Los_Angeles"},
             "description": "A test event",
             "location": "Room 1",
+        },
+    )
+    assert result == fake_event
+
+
+# --- create_all_day_event tests ---
+
+def test_create_all_day_event():
+    """Verify all-day event body uses date format instead of dateTime."""
+    mock_service = MagicMock()
+    fake_event = {"id": "allday123", "summary": "Holiday"}
+    mock_service.events().insert().execute.return_value = fake_event
+
+    event_date = date(2026, 2, 16)
+    result = create_all_day_event(
+        mock_service,
+        summary="Holiday",
+        date=event_date,
+        calendar_id="test_cal",
+    )
+
+    mock_service.events().insert.assert_called_with(
+        calendarId="test_cal",
+        body={
+            "summary": "Holiday",
+            "start": {"date": "2026-02-16"},
+            "end": {"date": "2026-02-17"},
         },
     )
     assert result == fake_event

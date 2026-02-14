@@ -1,9 +1,12 @@
 """CLI entry point for Google Calendar operations."""
 
 import argparse
-from datetime import datetime
+import csv
+import re
+from datetime import datetime, timedelta
 
-from calendar_service import authenticate, list_events, create_event, get_event, delete_event
+from calendar_service import authenticate, list_events, list_events_for_date, create_event, create_all_day_event, get_event, delete_event
+from email_parser import parse_eml, extract_events_with_llm, is_duplicate_event, to_csv
 
 
 def cmd_list(args):
@@ -51,6 +54,44 @@ def cmd_delete(args):
     print(f"Deleted event {args.id}")
 
 
+def cmd_add(args):
+    service = authenticate()
+    with open(args.input, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            date_str = row["date"]
+            time_str = row["time"].strip()
+            description = row["description"]
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+            existing = list_events_for_date(service, parsed_date)
+            if existing and is_duplicate_event(row, existing):
+                print(f"Skipped (already exists): {description} on {date_str}")
+                continue
+
+            if not time_str:
+                event = create_all_day_event(service, summary=description, date=parsed_date)
+                print(f"Created all-day event: {description} on {date_str}")
+            elif re.match(r"^\d{2}:\d{2}-\d{2}:\d{2}$", time_str):
+                start_str, end_str = time_str.split("-")
+                start = datetime.combine(parsed_date, datetime.strptime(start_str, "%H:%M").time())
+                end = datetime.combine(parsed_date, datetime.strptime(end_str, "%H:%M").time())
+                event = create_event(service, summary=description, start=start, end=end)
+                print(f"Created timed event: {description} on {date_str} {time_str}")
+            else:
+                start = datetime.combine(parsed_date, datetime.strptime(time_str, "%H:%M").time())
+                end = start + timedelta(hours=1)
+                event = create_event(service, summary=description, start=start, end=end)
+                print(f"Created timed event: {description} on {date_str} {time_str} (1hr default)")
+
+
+def cmd_parse(args):
+    text = parse_eml(args.input)
+    events = extract_events_with_llm(text)
+    to_csv(events, args.output)
+    print(f"Extracted {len(events)} events to {args.output}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Google Calendar CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -78,6 +119,17 @@ def main():
     p_delete = subparsers.add_parser("delete", help="Delete an event")
     p_delete.add_argument("--id", required=True, help="Event ID")
     p_delete.set_defaults(func=cmd_delete)
+
+    # add
+    p_add = subparsers.add_parser("add", help="Add parsed events from CSV to Google Calendar")
+    p_add.add_argument("--input", required=True, help="Path to parsed events CSV")
+    p_add.set_defaults(func=cmd_add)
+
+    # parse
+    p_parse = subparsers.add_parser("parse", help="Parse an .eml file for events using LLM")
+    p_parse.add_argument("--input", required=True, help="Path to .eml file")
+    p_parse.add_argument("--output", default="parsed_events.csv", help="Output CSV path")
+    p_parse.set_defaults(func=cmd_parse)
 
     args = parser.parse_args()
     args.func(args)

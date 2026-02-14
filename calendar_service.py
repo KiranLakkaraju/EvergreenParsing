@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -50,6 +50,36 @@ def authenticate(token_path=TOKEN_PATH, credentials_path=CREDENTIALS_PATH):
             token_file.write(creds.to_json())
 
     return build("calendar", "v3", credentials=creds)
+
+
+def list_events_for_date(service, date, calendar_id=None):
+    """List all events on a specific date.
+
+    Args:
+        service: Authorized Google Calendar API service object.
+        date: A datetime.date object for the target day.
+        calendar_id: Calendar ID to use. Defaults to config value.
+
+    Returns:
+        List of event dicts for that date.
+    """
+    if calendar_id is None:
+        calendar_id = load_config()["calendar_id"]
+    time_min = datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc).isoformat()
+    time_max = datetime.combine(date + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc).isoformat()
+
+    result = (
+        service.events()
+        .list(
+            calendarId=calendar_id,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+    return result.get("items", [])
 
 
 def list_events(service, max_results=10, time_min=None, calendar_id=None):
@@ -107,6 +137,35 @@ def create_event(service, summary, start, end, description=None, location=None, 
         "summary": summary,
         "start": {"dateTime": start.isoformat(), "timeZone": timezone},
         "end": {"dateTime": end.isoformat(), "timeZone": timezone},
+    }
+    if description:
+        event_body["description"] = description
+    if location:
+        event_body["location"] = location
+
+    return service.events().insert(calendarId=calendar_id, body=event_body).execute()
+
+
+def create_all_day_event(service, summary, date, description=None, location=None, calendar_id=None):
+    """Create an all-day calendar event.
+
+    Args:
+        service: Authorized Google Calendar API service object.
+        summary: Event title.
+        date: Event date as a datetime.date object.
+        description: Optional event description.
+        location: Optional event location.
+        calendar_id: Calendar ID to use. Defaults to config value.
+
+    Returns:
+        The created event dict.
+    """
+    if calendar_id is None:
+        calendar_id = load_config()["calendar_id"]
+    event_body = {
+        "summary": summary,
+        "start": {"date": date.isoformat()},
+        "end": {"date": (date + timedelta(days=1)).isoformat()},
     }
     if description:
         event_body["description"] = description
