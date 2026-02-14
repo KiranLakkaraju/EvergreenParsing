@@ -68,7 +68,7 @@ def test_parse_eml_multipart_prefers_html():
 
 # --- extract_events_with_llm tests ---
 
-FAKE_LLM_RESPONSE = '[{"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks"}]'
+FAKE_LLM_RESPONSE = '[{"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks", "is_deadline": false}]'
 
 FAKE_CONFIG = {
     "calendar_id": "test",
@@ -143,8 +143,8 @@ def test_is_duplicate_event_no_existing():
 def test_to_csv_writes_correct_format():
     """CSV output has the right headers and data."""
     events = [
-        {"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks"},
-        {"date": "2026-02-12", "time": "", "description": "Adventure Days"},
+        {"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks", "is_deadline": False},
+        {"date": "2026-02-12", "time": "", "description": "Adventure Days", "is_deadline": False},
     ]
     fd, path = tempfile.mkstemp(suffix=".csv")
     os.close(fd)
@@ -158,5 +158,25 @@ def test_to_csv_writes_correct_format():
         assert rows[0]["time"] == "12:00-13:00"
         assert rows[0]["description"] == "ParentEd Talks"
         assert rows[1]["time"] == ""
+    finally:
+        os.unlink(path)
+
+
+def test_to_csv_writes_is_deadline_column():
+    """CSV output includes the is_deadline column."""
+    events = [
+        {"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks", "is_deadline": False},
+        {"date": "2026-02-14", "time": "", "description": "Registration Due", "is_deadline": True},
+    ]
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    os.close(fd)
+    try:
+        to_csv(events, path)
+        with open(path) as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        assert "is_deadline" in reader.fieldnames
+        assert rows[0]["is_deadline"] == "False"
+        assert rows[1]["is_deadline"] == "True"
     finally:
         os.unlink(path)

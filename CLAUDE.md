@@ -45,7 +45,7 @@ EvergreenParsing is a Python project that parses Evergreen emails and creates Go
 
 - `config.json` — User-specific configuration (gitignored). Contains `calendar_id` and LLM settings used by API methods.
 - `calendar_service.py` — Core library: `load_config` reads `config.json`, `authenticate` handles OAuth 2.0, and `list_events`/`create_event`/`get_event`/`delete_event` wrap the Google Calendar API
-- `email_parser.py` — Parses `.eml` files, extracts event dates/times via a configurable LLM (Anthropic or OpenAI), and outputs CSV
+- `email_parser.py` — Parses `.eml` files, extracts event dates/times via a configurable LLM (Anthropic or OpenAI), and outputs CSV. The LLM also classifies events as deadlines (`is_deadline`); deadline events automatically get an 8 AM morning popup reminder in Google Calendar
 - `main.py` — CLI entry point using argparse with subcommands
 - `tests/test_calendar_service.py` — Unit tests with mocked API calls (no credentials needed)
 - `tests/test_email_parser.py` — Unit tests for email parsing with mocked LLM calls

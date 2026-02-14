@@ -115,7 +115,7 @@ def list_events(service, max_results=10, time_min=None, calendar_id=None):
     return result.get("items", [])
 
 
-def create_event(service, summary, start, end, description=None, location=None, timezone="America/Los_Angeles", calendar_id=None):
+def create_event(service, summary, start, end, description=None, location=None, timezone="America/Los_Angeles", calendar_id=None, reminders=None):
     """Create a calendar event.
 
     Args:
@@ -127,6 +127,7 @@ def create_event(service, summary, start, end, description=None, location=None, 
         location: Optional event location.
         timezone: Timezone string (default: America/Los_Angeles).
         calendar_id: Calendar ID to use. Defaults to config value.
+        reminders: Optional reminders dict for the event.
 
     Returns:
         The created event dict.
@@ -142,11 +143,13 @@ def create_event(service, summary, start, end, description=None, location=None, 
         event_body["description"] = description
     if location:
         event_body["location"] = location
+    if reminders:
+        event_body["reminders"] = reminders
 
     return service.events().insert(calendarId=calendar_id, body=event_body).execute()
 
 
-def create_all_day_event(service, summary, date, description=None, location=None, calendar_id=None):
+def create_all_day_event(service, summary, date, description=None, location=None, calendar_id=None, reminders=None):
     """Create an all-day calendar event.
 
     Args:
@@ -156,6 +159,7 @@ def create_all_day_event(service, summary, date, description=None, location=None
         description: Optional event description.
         location: Optional event location.
         calendar_id: Calendar ID to use. Defaults to config value.
+        reminders: Optional reminders dict for the event.
 
     Returns:
         The created event dict.
@@ -171,6 +175,8 @@ def create_all_day_event(service, summary, date, description=None, location=None
         event_body["description"] = description
     if location:
         event_body["location"] = location
+    if reminders:
+        event_body["reminders"] = reminders
 
     return service.events().insert(calendarId=calendar_id, body=event_body).execute()
 

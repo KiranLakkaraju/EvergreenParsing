@@ -22,11 +22,12 @@ Rules:
   - "date": string in YYYY-MM-DD format
   - "time": string in HH:MM or HH:MM-HH:MM (24-hour) format, or "" if no specific time
   - "description": short description of the event
+  - "is_deadline": boolean — set to true if the event is a deadline, due date, registration closing, or similar time-sensitive cutoff; false otherwise
 
 Example output:
 [
-  {"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks"},
-  {"date": "2026-02-12", "time": "", "description": "Adventure Days"}
+  {"date": "2026-02-10", "time": "12:00-13:00", "description": "ParentEd Talks", "is_deadline": false},
+  {"date": "2026-02-12", "time": "", "description": "Auction Donations Due", "is_deadline": true}
 ]
 
 Here is the email text:
@@ -234,6 +235,6 @@ def is_duplicate_event(new_event, existing_events, config_path=CONFIG_PATH):
 def to_csv(events, output_path):
     """Write a list of event dicts to a CSV file."""
     with open(output_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["date", "time", "description"])
+        writer = csv.DictWriter(f, fieldnames=["date", "time", "description", "is_deadline"])
         writer.writeheader()
         writer.writerows(events)
