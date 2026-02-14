@@ -112,6 +112,8 @@ def cmd_process(args):
         writer.writeheader()
         writer.writerows(events)
 
+    created = 0
+    skipped = 0
     try:
         service = authenticate()
         with open(tmp_path, newline="") as f:
@@ -125,6 +127,7 @@ def cmd_process(args):
                 existing = list_events_for_date(service, parsed_date)
                 if existing and is_duplicate_event(row, existing):
                     print(f"Skipped (already exists): {description} on {date_str}")
+                    skipped += 1
                     continue
 
                 if not time_str:
@@ -141,9 +144,12 @@ def cmd_process(args):
                     end = start + timedelta(hours=1)
                     create_event(service, summary=description, start=start, end=end)
                     print(f"Created timed event: {description} on {date_str} {time_str} (1hr default)")
+                created += 1
     finally:
         import os
         os.unlink(tmp_path)
+
+    print(f"\nDone: {created} created, {skipped} skipped (duplicates).")
 
 
 def main():
