@@ -211,3 +211,7 @@ credentials.json
 client_secret_*.json
 token.json
 config.json
+
+# Data and generated files
+data/
+parsed_events*.csv
